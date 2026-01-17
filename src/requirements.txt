@@ -1,0 +1,9 @@
+dagster
+dagster-webserver
+dagster-postgres
+dagster-aws
+pandas
+requests
+minio
+pyarrow
+boto3

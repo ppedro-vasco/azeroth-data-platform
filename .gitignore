@@ -1,0 +1,33 @@
+# --- Python & Ambiente Virtual ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Segurança---
+.env
+.env.*
+# Exceção: queremos subir o modelo de exemplo
+!.env.example
+
+# --- Dados Locais e Volumes ---
+data/
+outputs/
+downloads/
+
+#  Volumes do Docker para pastas locais no futuro
+postgres_data/
+minio_data/
+dagster_home/
+
+# --- Logs e Temporários do Dagster ---
+storage/
+debug.log
+
+# --- IDEs e Sistema Operacional ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

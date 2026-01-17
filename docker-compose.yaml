@@ -1,0 +1,82 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: azeroth-data_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: azeroth_data
+    ports:
+      - "5333:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data_network
+
+  minio:
+    image: minio/minio
+    container_name: azeroth-data_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - data_network
+
+  dagster_webserver:
+    build:
+      context: .
+      dockerfile: docker/dagster/Dockerfile
+    container_name: dagster_webserver
+    restart: always
+    environment:
+      DAGSTER_POSTGRES_USER: admin
+      DAGSTER_POSTGRES_PASSWORD: admin
+      DAGSTER_POSTGRES_DB: azeroth_data
+      DAGSTER_CURRENT_IMAGE_NAME: "azeroth-dagster-image"
+    volumes:
+     - ./src:/opt/dagster/app
+     - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+    ports:
+     - "3000:3000"
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w workspace.yaml
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - data_network
+  
+  dagster_daemon:
+    build:
+      context: .
+      dockerfile: docker/dagster/Dockerfile
+    container_name: dagster_daemon
+    restart: always
+    environment:
+      DAGSTER_POSTGRES_USER: admin
+      DAGSTER_POSTGRES_PASSWORD: admin
+      DAGSTER_POSTGRES_DB: azeroth_data
+    volumes:
+      - ./src:/opt/dagster/app
+      - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+    command: dagster-daemon run
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - data_network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  data_network:
+    driver: bridge
