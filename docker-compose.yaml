@@ -41,6 +41,8 @@ services:
       DAGSTER_POSTGRES_PASSWORD: admin
       DAGSTER_POSTGRES_DB: azeroth_data
       DAGSTER_CURRENT_IMAGE_NAME: "azeroth-dagster-image"
+      BLIZZARD_CLIENT_ID: ${BLIZZARD_CLIENT_ID}
+      BLIZZARD_CLIENT_SECRET: ${BLIZZARD_CLIENT_SECRET}
     volumes:
      - ./src:/opt/dagster/app
      - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
@@ -63,6 +65,8 @@ services:
       DAGSTER_POSTGRES_USER: admin
       DAGSTER_POSTGRES_PASSWORD: admin
       DAGSTER_POSTGRES_DB: azeroth_data
+      BLIZZARD_CLIENT_ID: ${BLIZZARD_CLIENT_ID}
+      BLIZZARD_CLIENT_SECRET: ${BLIZZARD_CLIENT_SECRET}
     volumes:
       - ./src:/opt/dagster/app
       - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
