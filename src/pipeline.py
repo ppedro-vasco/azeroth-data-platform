@@ -172,7 +172,26 @@ def check_prices_non_negative(context, process_silver_data):
         }
     )
 
+@asset_check(asset = process_silver_data, description = "Garante que a quantidade de itens processados é sempre positiva.")
+def check_quantity_positive(context, process_silver_data):
+    data = process_silver_data
+    invalid_rows = [row for row in data if row.get('quantity', 0) <= 0]
+
+    return AssetCheckResult(
+        passed = len(invalid_rows) == 0,
+        metadata = {
+            "invalid_quantity_count": len(invalid_rows)
+        }
+    )
+
 defs = Definitions(
-    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data, compliance_enforcer],
+    assets = [
+        get_token, 
+        get_realm_id, 
+        extract_auction_data, 
+        process_silver_data, 
+        compliance_enforcer
+        ],
+    asset_checks = [check_prices_non_negative, check_quantity_positive],
     schedules = [hourly_schedule, daily_cleanup_schedule]
 )
