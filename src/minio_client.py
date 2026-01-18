@@ -1,7 +1,9 @@
 import boto3
 import json
 import os
+
 from botocore.exceptions import ClientError
+from datetime import datetime, timezone, timedelta
 
 class MinIOClient:
     def __init__(self):
@@ -44,3 +46,22 @@ class MinIOClient:
             return True
         except ClientError as e:
             raise Exception(f"Erro ao salvar no MinIO: {e}")
+
+    def prune_old_files(self, bucket_name, days_retention=30):
+        self._ensure_bucket_exists(bucket_name)
+
+        response = self.s3_client.list_objects_v2(Bucket=bucket_name)
+        if 'Contents' not in response:
+            return 0
+        
+        delete_count = 0
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days = days_retention)
+
+        for object in response['Contents']:
+            if object['LastModified'] < cutoff_date:
+                print(f"Deletando arquivo antigo: {object['Key']}")
+                self.s3_client.delete_object(Bucket=bucket_name, Key=object['Key'])
+                delete_count += 1
+
+        return delete_count
+        
