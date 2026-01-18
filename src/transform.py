@@ -6,13 +6,20 @@ def transform_auctions(raw_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
     
     transformed_list = []
+    ignored_count = 0
 
     for row in raw_data['auctions']:
         item_data = row.get('item', {})
 
+        item_id = item_data.get('id')
+
+        if not item_id:
+            ignored_count += 1
+            continue
+
         action_object = {
             "id": row.get('id'),
-            "item_id": row.get('item_id'),
+            "item_id": item_id,
             "quantity":row.get('quantity'),
             "unit_price":row.get('unit_price'),
             "buyout":row.get('buyout'),

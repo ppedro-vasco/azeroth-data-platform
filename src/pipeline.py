@@ -4,6 +4,8 @@ from dagster import asset, AssetExecutionContext, Definitions
 from blizzard_auth import BlizzardAuth
 from minio_client import MinIOClient
 from datetime import datetime
+from transform import transform_auctions
+from postgres_client import PostgresClient
 
 @asset
 def get_token(context: AssetExecutionContext):
@@ -78,6 +80,31 @@ def extract_auction_data(context: AssetExecutionContext):
 
     return data
 
+@asset
+def process_silver_data(context: AssetExecutionContext, extract_auction_data):
+    raw_data = extract_auction_data
+
+    context.log.info("Iniciando transformação dos dados do leilão...")
+    transformed_data = transform_auctions(raw_data)
+
+    if not transformed_data:
+        context.log.warn("Nenhum dado para processar.")
+        return []
+    
+    minio = MinIOClient()
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"silver_auctions_{timestamp}.json"
+
+    minio.save_json(transformed_data, filename, bucket_name="silver")
+    context.log.info(f"Arquivo transformado salvo no MinIO (bucket = silver): {filename}")
+
+    pg_client = PostgresClient()
+    context.log.info("Iniciando inserção dos dados transformados no Postgres...")
+    
+    qtd_inserida = pg_client.insert_auctions(transformed_data)
+    context.log.info(f"Inserção concluída. Total de registros inseridos: {qtd_inserida}")
+    return transformed_data
+
 defs = Definitions(
-    assets = [get_token, get_realm_id, extract_auction_data]
+    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data]
 )
