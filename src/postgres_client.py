@@ -1,6 +1,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import text
 from database import Auction, create_tables
 
 class PostgresClient:
@@ -30,6 +31,22 @@ class PostgresClient:
         except Exception as e:
             session.rollback()
             print(f"Erro ao inserir no postgres: {e}")
+            raise e
+        finally:
+            session.close()
+    
+    def delete_old_data(self, days_retention=30):
+        session = self.Session()
+        try:
+            sql = f"DELETE FROM auctions WHERE timestamp < NOW() - INTERVAL '{days_retention} days';"
+
+            result = session.execute(text(sql))
+            session.commit()
+
+            return result.rowcount
+        except Exception as e:
+            session.rollback()
+            print(f"Erro ao deletar dados antigos no postgres: {e}")
             raise e
         finally:
             session.close()
