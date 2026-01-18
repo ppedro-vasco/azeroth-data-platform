@@ -1,11 +1,29 @@
 import requests
 
-from dagster import asset, AssetExecutionContext, Definitions
 from blizzard_auth import BlizzardAuth
 from minio_client import MinIOClient
 from datetime import datetime
 from transform import transform_auctions
 from postgres_client import PostgresClient
+
+from dagster import (
+    asset, 
+    AssetExecutionContext, 
+    Definitions,
+    ScheduleDefinition,
+    define_asset_job,
+)
+
+# ------------------------------------------------
+# DEFINIÇÃO DE JOBS E SCHEDULES
+# ------------------------------------------------
+auction_job = define_asset_job(name = "auction_update_job", selection = "*")
+
+hourly_schedule = ScheduleDefinition(
+    job = auction_job,
+    cron_schedule = "0 * * * *",  # Executa a cada hora no minuto 0
+    name = "hourly_update_schedule"
+)
 
 @asset
 def get_token(context: AssetExecutionContext):
@@ -106,5 +124,6 @@ def process_silver_data(context: AssetExecutionContext, extract_auction_data):
     return transformed_data
 
 defs = Definitions(
-    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data]
+    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data],
+    schedules = [hourly_schedule]
 )
