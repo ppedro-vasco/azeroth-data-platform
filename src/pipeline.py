@@ -140,7 +140,7 @@ def compliance_enforcer(context: AssetExecutionContext):
     context.log.info(f"Arquivos antigos deletados: bronze={deleted_bronze}, silver={deleted_silver}")
 
     pg = PostgresClient()
-    deleted_rows = pg.prune_old_auctions(RETENTION_DAYS)
+    deleted_rows = pg.delete_old_data(RETENTION_DAYS)
     context.log.info(f"Postgres Cleanup: {deleted_rows} linhas deletadas.")
 
     return {

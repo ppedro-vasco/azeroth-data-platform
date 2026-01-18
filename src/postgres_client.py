@@ -1,7 +1,9 @@
 import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
+from sqlalchemy.dialects.postgresql import insert
 from database import Auction, create_tables
 
 class PostgresClient:
@@ -14,20 +16,25 @@ class PostgresClient:
         port = os.getenv("POSTGRES_PORT", "5432")
 
         self.connection_string = f"postgresql://{user}:{password}@{host}:{port}/{db}"
-
         self.engine = create_engine(self.connection_string)
         self.Session = sessionmaker(bind = self.engine)
+        self.Auction = Auction
 
         create_tables(self.connection_string)
 
     def insert_auctions(self, auction_dict_list):
         session = self.Session()
         try:
-            auction_objects = [Auction(**data) for data in auction_dict_list]
-            session.add_all(auction_objects)
+            if not auction_dict_list:
+                return 0
+            
+            stmt = insert(self.Auction).values(auction_dict_list)
+            stmt = stmt.on_conflict_do_nothing(index_elements=['id'])
+            result = session.execute(stmt)
             session.commit()
-
-            return len(auction_objects)
+            
+            return result.rowcount
+           
         except Exception as e:
             session.rollback()
             print(f"Erro ao inserir no postgres: {e}")
@@ -38,7 +45,7 @@ class PostgresClient:
     def delete_old_data(self, days_retention=30):
         session = self.Session()
         try:
-            sql = f"DELETE FROM auctions WHERE timestamp < NOW() - INTERVAL '{days_retention} days';"
+            sql = f"DELETE FROM silver_auctions WHERE created_at < NOW() - INTERVAL '{days_retention} days'"
 
             result = session.execute(text(sql))
             session.commit()
