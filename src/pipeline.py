@@ -18,11 +18,18 @@ from dagster import (
 # DEFINIÇÃO DE JOBS E SCHEDULES
 # ------------------------------------------------
 auction_job = define_asset_job(name = "auction_update_job", selection = "*")
+maintenance_job = define_asset_job(name = "maintenance_job", selection = "compliance_enforcer")
 
 hourly_schedule = ScheduleDefinition(
     job = auction_job,
     cron_schedule = "0 * * * *",  # Executa a cada hora no minuto 0
     name = "hourly_update_schedule"
+)
+
+daily_cleanup_schedule = ScheduleDefinition(
+    job = maintenance_job,
+    cron_schedule = "0 0 * * *",
+    name = "daily_compliance_check_schedule"
 )
 
 @asset
@@ -123,7 +130,26 @@ def process_silver_data(context: AssetExecutionContext, extract_auction_data):
     context.log.info(f"Inserção concluída. Total de registros inseridos: {qtd_inserida}")
     return transformed_data
 
+@asset
+def compliance_enforcer(context: AssetExecutionContext):
+    RETENTION_DAYS = 30
+
+    minio = MinIOClient()
+    deleted_bronze = minio.prune_old_files("bronze", RETENTION_DAYS)
+    deleted_silver = minio.prune_old_files("silver", RETENTION_DAYS)
+    context.log.info(f"Arquivos antigos deletados: bronze={deleted_bronze}, silver={deleted_silver}")
+
+    pg = PostgresClient()
+    deleted_rows = pg.prune_old_auctions(RETENTION_DAYS)
+    context.log.info(f"Postgres Cleanup: {deleted_rows} linhas deletadas.")
+
+    return {
+        "deleted_bronze_files": deleted_bronze,
+        "deleted_silver_files": deleted_silver,
+        "deleted_db_rows": deleted_rows
+    }
+
 defs = Definitions(
-    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data],
-    schedules = [hourly_schedule]
+    assets = [get_token, get_realm_id, extract_auction_data, process_silver_data, compliance_enforcer],
+    schedules = [hourly_schedule, daily_cleanup_schedule]
 )
