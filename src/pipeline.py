@@ -11,7 +11,9 @@ from dagster import (
     AssetExecutionContext, 
     Definitions,
     ScheduleDefinition,
-    define_asset_job,
+    define_asset_job, 
+    asset_check, 
+    AssetCheckResult
 )
 
 # ------------------------------------------------
@@ -148,6 +150,27 @@ def compliance_enforcer(context: AssetExecutionContext):
         "deleted_silver_files": deleted_silver,
         "deleted_db_rows": deleted_rows
     }
+
+@asset_check(asset = process_silver_data, description = "Garante que não existem preços negativos nos dados processados.")
+def check_prices_non_negative(context, process_silver_data):
+    data = process_silver_data
+    issues = []
+
+    for row in data:
+        if row.get('buyout') is not None and row ['buyout'] < 0:
+            issues.append(f"Item {row['item_id']} com BUYOUT negativo: {row['buyout']}")
+
+        if row.get('unit_price') is not None and row ['unit_price'] < 0:
+            issues.append(f"Item {row['item_id']} com UNIT_PRICE negativo: {row['unit_price']}")
+
+    return AssetCheckResult(
+        passed =len(issues) == 0,
+        metadata = {
+            "total_rows_checked": len(data),
+            "negative_price_count": len(issues),
+            "sample_issues": issues[:5]
+        }
+    )
 
 defs = Definitions(
     assets = [get_token, get_realm_id, extract_auction_data, process_silver_data, compliance_enforcer],
