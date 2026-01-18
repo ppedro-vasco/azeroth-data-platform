@@ -2,6 +2,8 @@ import requests
 
 from dagster import asset, AssetExecutionContext, Definitions
 from blizzard_auth import BlizzardAuth
+from minio_client import MinIOClient
+from datetime import datetime
 
 @asset
 def get_token(context: AssetExecutionContext):
@@ -48,12 +50,10 @@ def extract_auction_data(context: AssetExecutionContext):
     connected_realm_id = 3209
 
     url = f"https://us.api.blizzard.com/data/wow/connected-realm/{connected_realm_id}/auctions"
-
     query_params = {
         'namespace': 'dynamic-us',
         'locale': 'pt_BR'
     }
-
     headers = {
         'Authorization': f'Bearer {token}'
     }
@@ -62,12 +62,20 @@ def extract_auction_data(context: AssetExecutionContext):
 
     response = requests.get(url, params=query_params, headers=headers)
     response.raise_for_status()
-
     data = response.json()
 
     qtd_itens = len(data.get('auctions', []))
     context.log.info(f"Download concluído. Total de lotes no leilão: {qtd_itens}")
+
+    minio = MinIOClient()
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"auctions_{connected_realm_id}_{timestamp}.json"
     
+    minio.save_json(data, filename)
+
+    context.log.info(f"Arquivo salvo no MinIO (bucket = bronze): {filename}")
+
     return data
 
 defs = Definitions(
