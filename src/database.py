@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import create_engine, Column, Integer, String, BigInteger, DateTime
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
@@ -22,3 +24,14 @@ def create_tables(connection_string):
     engine = create_engine(connection_string)
     Base.metadata.create_all(engine)
     print("Schema verificado/criado com sucesso!")
+
+class ItemDimension(Base):
+    __tablename__ = 'dim_items'
+
+    item_id = Column(BigInteger, primary_key=True)
+    name = Column(String, nullable=False)
+    quality = Column(String, nullable=False)
+    item_class = Column(String, nullable=False)
+    item_subclass = Column(String, nullable=False)
+    icon_url = Column(String)
+    last_updated = Column(DateTime, default=datetime.utcnow)
