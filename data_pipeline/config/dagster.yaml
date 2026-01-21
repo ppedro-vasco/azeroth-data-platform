@@ -1,5 +1,5 @@
 storage:
-  postgres:  # <--- Corrigido (estava posgteres)
+  postgres:
     postgres_db:
       username:
         env: DAGSTER_POSTGRES_USER

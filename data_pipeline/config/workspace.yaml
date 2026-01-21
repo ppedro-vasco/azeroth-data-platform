@@ -1,0 +1,7 @@
+load_from:
+  - python_file:
+      # Em vez de tentar calcular "../", dizemos exatamente onde está o arquivo no Docker
+      relative_path: "/opt/dagster/app/pipeline.py"
+      attribute: defs
+      # Forçamos o Dagster a rodar a partir da raiz, para que os imports (assets, utils) funcionem
+      working_directory: "/opt/dagster/app"
