@@ -121,3 +121,60 @@ def gold_market_opportunities(context: AssetExecutionContext):
     pg.execute_sql_command(sql)
 
     context.log.info("Tabela gold_market_opportunities recriada com sucesso.")
+
+@asset(deps=["process_silver_data", "build_item_dimension"])
+def gold_item_demand(context: AssetExecutionContext):
+    sql = """
+    DROP TABLE IF EXISTS gold_market_concentration;
+    
+    CREATE TABLE gold_market_concentration AS
+    WITH daily_stats AS (
+        SELECT 
+            item_id,
+            DATE(created_at) as snapshot_date,
+            MIN(buyout) as min_price,
+            SUM(quantity) as total_market_quantity
+        FROM silver_auctions
+        GROUP BY 1, 2
+    ),
+    floor_stats AS (
+        -- Calcula quanto do estoque está EXATAMENTE no preço mínimo
+        SELECT 
+            s.item_id,
+            DATE(s.created_at) as snapshot_date,
+            SUM(s.quantity) as quantity_at_floor
+        FROM silver_auctions s
+        JOIN daily_stats d ON s.item_id = d.item_id AND DATE(s.created_at) = d.snapshot_date
+        WHERE s.buyout = d.min_price -- Pega só quem está vendendo barato
+        GROUP BY 1, 2
+    )
+    SELECT 
+        d.item_id,
+        i.name as item_name,
+        i.icon_url,
+        d.snapshot_date,
+        d.total_market_quantity,
+        COALESCE(f.quantity_at_floor, 0) as quantity_at_floor,
+        
+        -- Market Wall Strength: % do mercado que está no preço mínimo
+        -- Se for 100%, é um mercado 'flat' (bom para comprar tudo e resetar).
+        -- Se for 5%, é um mercado distribuído.
+        (COALESCE(f.quantity_at_floor, 0) / NULLIF(d.total_market_quantity, 0)) * 100 as floor_concentration_pct,
+        
+        CASE 
+            WHEN (COALESCE(f.quantity_at_floor, 0) / NULLIF(d.total_market_quantity, 0)) > 0.8 THEN 'HIGH_CONCENTRATION'
+            WHEN d.total_market_quantity < 50 THEN 'SCARCE_SUPPLY'
+            ELSE 'HEALTHY'
+        END as market_status
+        
+    FROM daily_stats d
+    LEFT JOIN floor_stats f ON d.item_id = f.item_id AND d.snapshot_date = f.snapshot_date
+    LEFT JOIN dim_items i ON d.item_id = i.item_id;
+    
+    CREATE INDEX idx_gold_concentration ON gold_market_concentration(item_id, snapshot_date);
+    """
+
+    pg = PostgresClient()
+    pg.execute_sql_command(sql)
+
+    context.log.info("Tabela gold_item_demand recriada com sucesso.")
