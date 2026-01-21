@@ -104,3 +104,17 @@ class PostgresClient:
             raise e
         finally:
             session.close()
+
+    def execute_sql_command(self, sql_query):
+        session = self.Session()
+        try:
+            session.execute(text(sql_query))
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            print(f"Erro ao executar comando SQL: {e}")
+            raise e
+        finally:
+            session.close()
+            
+    

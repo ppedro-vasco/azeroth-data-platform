@@ -5,6 +5,7 @@ from minio_client import MinIOClient
 from datetime import datetime
 from transform import transform_auctions
 from postgres_client import PostgresClient
+from gold_layer import gold_daily_market_summary, gold_price_history
 
 from dagster import (
     asset, 
@@ -154,7 +155,7 @@ def compliance_enforcer(context: AssetExecutionContext):
 @asset
 def build_item_dimension(context: AssetExecutionContext, process_silver_data):
     pg = PostgresClient()
-    missing_ids = pg.get_missing_item_ids(limit=50)
+    missing_ids = pg.get_missing_item_ids(limit=100)
 
     if not missing_ids:
         context.log.info("Nenhum item faltando na dimensão.")
@@ -203,6 +204,8 @@ def build_item_dimension(context: AssetExecutionContext, process_silver_data):
         count = pg.insert_item_dimensions(new_itens_catalog)
         context.log.info(f"Sucesso! {count} novos itens adicionados ao catálogo.")
 
+
+
 @asset_check(asset = process_silver_data, description = "Garante que não existem preços negativos nos dados processados.")
 def check_prices_non_negative(context, process_silver_data):
     data = process_silver_data
@@ -243,7 +246,9 @@ defs = Definitions(
         extract_auction_data, 
         process_silver_data, 
         compliance_enforcer,
-        build_item_dimension
+        build_item_dimension,
+        gold_daily_market_summary,
+        gold_price_history
         ],
     asset_checks = [check_prices_non_negative, check_quantity_positive],
     schedules = [hourly_schedule, daily_cleanup_schedule]
