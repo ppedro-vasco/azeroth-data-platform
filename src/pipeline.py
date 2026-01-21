@@ -10,7 +10,8 @@ from gold_layer import (
     gold_price_history, 
     gold_market_opportunities,
     gold_item_demand,
-    gold_market_concentration
+    gold_market_concentration,
+    gold_market_index
     )
 
 from dagster import (
@@ -257,7 +258,8 @@ defs = Definitions(
         gold_price_history,
         gold_market_opportunities,
         gold_item_demand,
-        gold_market_concentration
+        gold_market_concentration,
+        gold_market_index
         ],
     asset_checks = [check_prices_non_negative, check_quantity_positive],
     schedules = [hourly_schedule, daily_cleanup_schedule]

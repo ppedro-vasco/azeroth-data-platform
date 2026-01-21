@@ -224,3 +224,45 @@ def gold_market_concentration(context: AssetExecutionContext):
     pg = PostgresClient()
     pg.execute_sql_command(sql)
     context.log.info("Tabela gold_market_concentration criada.")
+
+@asset(deps=["gold_daily_market_summary", "build_item_dimension"])
+def gold_market_index(context: AssetExecutionContext):
+    sql = """
+    DROP TABLE IF EXISTS gold_market_index;
+    
+    CREATE TABLE gold_market_index AS
+    WITH liquid_basket AS (
+        SELECT item_id
+        FROM gold_daily_market_summary
+        GROUP BY 1
+        HAVING AVG(quantity_available) > 2000 
+    ),
+    daily_index AS (
+        SELECT 
+            s.snapshot_date,
+            SUM(s.median_buyout) as index_value, 
+            COUNT(s.item_id) as items_in_index
+        FROM gold_daily_market_summary s
+        JOIN liquid_basket b ON s.item_id = b.item_id
+        GROUP BY 1
+    )
+    SELECT
+        snapshot_date,
+        items_in_index,
+        index_value,
+        ROUND(
+            (
+                ((index_value - LAG(index_value) OVER (ORDER BY snapshot_date)) / 
+                NULLIF(LAG(index_value) OVER (ORDER BY snapshot_date), 0)) * 100
+            )::NUMERIC, 
+            2
+        ) as inflation_pct_daily
+        
+    FROM daily_index;
+    
+    CREATE INDEX idx_market_index ON gold_market_index(snapshot_date);
+    """
+    
+    pg = PostgresClient()
+    pg.execute_sql_command(sql)
+    context.log.info("Tabela gold_market_index criada com sucesso.")
