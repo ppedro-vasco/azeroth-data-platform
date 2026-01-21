@@ -65,3 +65,59 @@ def gold_price_history(context: AssetExecutionContext):
     pg.execute_sql_command(sql)
 
     context.log.info("Tabela gold_price_history recriada com sucesso.")
+
+@asset(deps=["gold_daily_market_summary", "build_item_dimension"])
+def gold_market_opportunities(context: AssetExecutionContext):
+    sql = """
+    DROP TABLE IF EXISTS gold_market_opportunities;
+    
+    CREATE TABLE gold_market_opportunities AS
+    WITH rolling_stats AS (
+        SELECT
+            item_id,
+            snapshot_date,
+            median_buyout,
+            min_buyout,
+            
+            AVG(median_buyout) OVER (
+                PARTITION BY item_id
+                ORDER BY snapshot_date
+                ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+                ) AS avg_price_7d,
+
+            STDDEV(median_buyout) OVER (
+                PARTITION BY item_id
+                ORDER BY snapshot_date
+                ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+                ) AS std_dev_7d
+        FROM gold_daily_market_summary
+    )
+    SELECT
+        r.item_id,
+        d.name as item_name,
+        d.icon_url,
+        r.snapshot_date,
+        
+        r.min_buyout as current_price,
+        r.avg_price_7d,
+        r.std_dev_7d,
+        
+        (r.min_buyout - r.avg_price_7d) / NULLIF(r.std_dev_7d, 0) AS z_score,
+
+        CASE
+            WHEN (r.min_buyout - r.avg_price_7d) / NULLIF(r.std_dev_7d, 0) <= -1.5 THEN 'BUY'
+            WHEN (r.min_buyout - r.avg_price_7d) / NULLIF(r.std_dev_7d, 0) >= -1.5 THEN 'SELL'
+            ELSE 'HOLD'
+        END AS recommendation
+
+    FROM rolling_stats r
+    LEFT JOIN dim_items d ON r.item_id = d.item_id
+    WHERE r.snapshot_date >= CURRENT_DATE - INTERVAL '30 days';
+
+    CREATE INDEX indx_opps_item ON gold_market_opportunities(item_id, snapshot_date);
+    """
+
+    pg = PostgresClient()
+    pg.execute_sql_command(sql)
+
+    context.log.info("Tabela gold_market_opportunities recriada com sucesso.")

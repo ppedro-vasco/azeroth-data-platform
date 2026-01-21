@@ -5,7 +5,7 @@ from minio_client import MinIOClient
 from datetime import datetime
 from transform import transform_auctions
 from postgres_client import PostgresClient
-from gold_layer import gold_daily_market_summary, gold_price_history
+from gold_layer import gold_daily_market_summary, gold_price_history, gold_market_opportunities
 
 from dagster import (
     asset, 
@@ -248,7 +248,8 @@ defs = Definitions(
         compliance_enforcer,
         build_item_dimension,
         gold_daily_market_summary,
-        gold_price_history
+        gold_price_history,
+        gold_market_opportunities
         ],
     asset_checks = [check_prices_non_negative, check_quantity_positive],
     schedules = [hourly_schedule, daily_cleanup_schedule]
