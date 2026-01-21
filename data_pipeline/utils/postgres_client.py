@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 from sqlalchemy.dialects.postgresql import insert
-from database import Auction, create_tables
+from utils.database import Auction, create_tables
 
 class PostgresClient:
     def __init__(self):
@@ -80,7 +80,7 @@ class PostgresClient:
     
     def insert_item_dimensions(self, items_dict_list):
         session = self.Session()
-        from database import ItemDimension
+        from utils.database import ItemDimension
 
         try:
             if not items_dict_list:

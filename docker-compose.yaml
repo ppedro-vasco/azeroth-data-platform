@@ -32,8 +32,8 @@ services:
 
   dagster_webserver:
     build:
-      context: .
-      dockerfile: docker/dagster/Dockerfile
+      context: ./data_pipeline
+      dockerfile: Dockerfile
     container_name: dagster_webserver
     restart: always
     environment:
@@ -50,11 +50,10 @@ services:
       
       DAGSTER_CURRENT_IMAGE_NAME: "azeroth-dagster-image"
     volumes:
-      - ./src:/opt/dagster/app
-      - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
+      - ./data_pipeline:/opt/dagster/app
     ports:
       - "3000:3000"
-    command: dagster-webserver -h 0.0.0.0 -p 3000 -w workspace.yaml
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w config/workspace.yaml
     depends_on:
       - postgres
       - minio
@@ -63,8 +62,8 @@ services:
   
   dagster_daemon:
     build:
-      context: .
-      dockerfile: docker/dagster/Dockerfile
+      context: ./data_pipeline
+      dockerfile: Dockerfile
     container_name: dagster_daemon
     restart: always
     environment:
@@ -79,9 +78,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      - ./src:/opt/dagster/app
-      - ./docker/dagster/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
-    command: dagster-daemon run
+      - ./data_pipeline:/opt/dagster/app
+    command: dagster-daemon run -w config/workspace.yaml
     depends_on:
       - postgres
       - minio

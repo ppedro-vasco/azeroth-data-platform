@@ -1,5 +1,5 @@
 from dagster import asset, AssetExecutionContext
-from postgres_client import PostgresClient
+from utils.postgres_client import PostgresClient
 
 @asset(deps=["process_silver_data", "build_item_dimension"])
 def gold_daily_market_summary(context: AssetExecutionContext):

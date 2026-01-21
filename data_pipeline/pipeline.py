@@ -1,18 +1,5 @@
 import requests
-
-from blizzard_auth import BlizzardAuth
-from minio_client import MinIOClient
 from datetime import datetime
-from transform import transform_auctions
-from postgres_client import PostgresClient
-from gold_layer import (
-    gold_daily_market_summary, 
-    gold_price_history, 
-    gold_market_opportunities,
-    gold_item_demand,
-    gold_market_concentration,
-    gold_market_index
-    )
 
 from dagster import (
     asset, 
@@ -23,6 +10,20 @@ from dagster import (
     asset_check, 
     AssetCheckResult
 )
+
+from assets.gold_layer import (
+    gold_daily_market_summary, 
+    gold_price_history, 
+    gold_market_opportunities,
+    gold_item_demand,
+    gold_market_concentration,
+    gold_market_index
+    )
+
+from utils.blizzard_auth import BlizzardAuth
+from utils.minio_client import MinIOClient
+from assets.transform import transform_auctions
+from utils.postgres_client import PostgresClient
 
 # ------------------------------------------------
 # DEFINIÇÃO DE JOBS E SCHEDULES
