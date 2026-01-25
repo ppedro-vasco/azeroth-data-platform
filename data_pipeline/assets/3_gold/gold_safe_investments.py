@@ -1,0 +1,1 @@
+# Filtro de média móvel 7d + Liquidez

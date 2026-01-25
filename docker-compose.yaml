@@ -107,6 +107,18 @@ services:
     networks:
       - data_network
 
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+    volumes:
+      - ./dashboard:/app
+    networks:
+      - data_network
 volumes:
   postgres_data:
   minio_data:
