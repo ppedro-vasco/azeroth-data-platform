@@ -57,7 +57,7 @@ class GoldPriceHistory(Base):
     avarage_price = Column(Float)
     volume = Column(BigInteger)
 
-class GoldPriceOpportunities(Base):
+class GoldMarketOpportunities(Base):
     __tablename__ = 'gold_market_opportunities'
 
     item_id = Column(BigInteger, primary_key=True)

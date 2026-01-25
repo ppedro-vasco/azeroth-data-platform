@@ -50,9 +50,9 @@ def get_price_history(item_id: int, limit: int = 48, db: Session = Depends(get_d
 
 @app.get("/analytics/opportunities", response_model=List[schemas.MarketOpportunityResponse])
 def get_opportunities(recommendation: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(models.GoldPriceOpportunities)
+    query = db.query(models.GoldMarketOpportunities)
     if recommendation:
-        query = query.filter(models.GoldPriceOpportunities.recommendation == recommendation.upper())
+        query = query.filter(models.GoldMarketOpportunities.recommendation == recommendation.upper())
 
     return query.order_by(models.GoldMarketOpportunities.z_score.asc()).all()
 
