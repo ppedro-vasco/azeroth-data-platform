@@ -1,4 +1,0 @@
-# DISTINCT
-# CONVERTE DE COBRE PARA OURO
-# NORMALIZA DATAS
-# Classe BlizzardCleaner 

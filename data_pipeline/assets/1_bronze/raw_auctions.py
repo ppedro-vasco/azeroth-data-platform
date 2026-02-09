@@ -1,1 +1,0 @@
-# JSON ou CSV bruto

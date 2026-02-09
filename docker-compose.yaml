@@ -50,10 +50,10 @@ services:
       
       DAGSTER_CURRENT_IMAGE_NAME: "azeroth-dagster-image"
     volumes:
-      - ./data_pipeline:/opt/dagster/app
+      - .:/opt/dagster/app
     ports:
       - "3000:3000"
-    command: dagster-webserver -h 0.0.0.0 -p 3000 -w config/workspace.yaml
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w data_pipeline/config/workspace.yaml
     depends_on:
       - postgres
       - minio
@@ -78,8 +78,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
-      - ./data_pipeline:/opt/dagster/app
-    command: dagster-daemon run -w config/workspace.yaml
+      - .:/opt/dagster/app
+    command: dagster-daemon run -w data_pipeline/config/workspace.yaml
     depends_on:
       - postgres
       - minio

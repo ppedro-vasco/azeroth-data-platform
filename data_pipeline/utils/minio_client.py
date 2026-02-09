@@ -10,6 +10,7 @@ class MinIOClient:
         self.endpoint_url = os.getenv("MINIO_ENDPOINT")
         self.access_key = os.getenv("MINIO_ROOT_USER")
         self.secret_key = os.getenv("MINIO_ROOT_PASSWORD")
+        
         self.bucket_name = "bronze"
 
         self.s3_client = boto3.client(
@@ -34,16 +35,16 @@ class MinIOClient:
         
         self._ensure_bucket_exists(target_bucket)
 
-        json_bytes = json.dumps(data, indent=2).encode('utf-8')
+        json_bytes = json.dumps(data, indent=2, ensure_ascii=False).encode('utf-8')
 
         try:
             self.s3_client.put_object(
                 Bucket = target_bucket,
                 Key = filename,
                 Body = json_bytes,
-                ContentType = 'application/json'
+                ContentType = 'application/json; charset=utf-8'
             )
-            return True
+            return f"s3://{target_bucket}/{filename}"
         except ClientError as e:
             raise Exception(f"Erro ao salvar no MinIO: {e}")
 
@@ -64,4 +65,21 @@ class MinIOClient:
                 delete_count += 1
 
         return delete_count
-        
+    
+    def read_json(self, path):
+        if path.startswith("s3://"):
+            path = path.replace("s3://", "")
+            bucket_name, key = path.split("/", 1)
+        else:
+            bucket_name = self.bucket_name
+            key = path
+
+        self._ensure_bucket_exists(bucket_name)
+
+        try:
+            response = self.s3_client.get_object(Bucket=bucket_name, Key=key)
+            content = response['Body'].read().decode('utf-8')
+            return json.loads(content)
+        except ClientError as e:
+            raise Exception(f"Erro ao ler do MinIO ({path}): {e}")
+

@@ -1,10 +1,11 @@
 import os
+import pandas as pd
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 from sqlalchemy.dialects.postgresql import insert
-from utils.database import Auction, create_tables
+from data_pipeline.utils.database import Auction, create_tables
 
 class PostgresClient:
     def __init__(self):
@@ -22,6 +23,12 @@ class PostgresClient:
 
         create_tables(self.connection_string)
 
+    def insert_dataframe(self, df: pd.DataFrame):
+        if df.empty:
+            return 0
+        data = df.to_dict(orient='records')
+        return self.insert_auctions(data)
+    
     def insert_auctions(self, auction_dict_list):
         session = self.Session()
         try:
@@ -67,11 +74,15 @@ class PostgresClient:
             SELECT DISTINCT s.item_id
             FROM silver_auctions s
             LEFT JOIN dim_items d ON s.item_id = d.item_id
-            WHERE d.item_id IS NULL
+            WHERE 
+                d.item_id IS NULL
+                OR d.name IS NULL
             LIMIT :limit
             """
+
             result = session.execute(text(sql), {'limit': limit})
             return [row[0] for row in result.fetchall()]
+        
         except Exception as e:
             print(f"Erro ao buscar item_ids faltantes: {e}")
             return []
@@ -80,27 +91,31 @@ class PostgresClient:
     
     def insert_item_dimensions(self, items_dict_list):
         session = self.Session()
-        from utils.database import ItemDimension
 
+        from data_pipeline.utils.database import ItemDimension
+        from datetime import datetime
         try:
             if not items_dict_list:
                 return 0
+            
             stmt = insert(ItemDimension).values(items_dict_list)
             stmt = stmt.on_conflict_do_update(
                 index_elements=['item_id'],
                 set_={
-                    "name": stmt.excluded.name,
-                    "icon_url": stmt.excluded.icon_url,
-                    "last_updated": stmt.excluded.last_updated
+                    'name': stmt.excluded.name,
+                    'quality': stmt.excluded.quality,
+                    'item_class': stmt.excluded.item_class,
+                    'item_subclass': stmt.excluded.item_subclass,
+                    'icon_url': stmt.excluded.icon_url,
+                    'last_updated': datetime.utcnow()
                 }
             )
-
             result = session.execute(stmt)
             session.commit()
             return result.rowcount
         except Exception as e:
             session.rollback()
-            print(f"Erro ao inserir itens: {e}")
+            print(f"Erro ao inserir dimensões: {e}")
             raise e
         finally:
             session.close()
